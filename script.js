@@ -89,3 +89,16 @@ initTokens();
 setTimeout(() => {
   initTokens();
 }, EACH_TWO_AND_HALF_HOUR);
+
+const http = require("http");
+const port = process.env.PORT || 3000;
+const host = process.env.HOST || "localhost";
+
+const requestListener = function (req, res) {
+  res.writeHead(200);
+  res.end("My first server!");
+};
+const server = http.createServer(requestListener);
+server.listen(port, host, () => {
+  console.log(`Server is running on http://${host}:${port}`);
+});
