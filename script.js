@@ -30,7 +30,6 @@ function initTokens() {
     })
       .then((r) => r.json())
       .then((r) => {
-        console.log(r);
         if (!r.authToken) return;
         url.token = `Bearer ${r.authToken}`;
         syncAccount(url.token);
@@ -60,7 +59,6 @@ function syncAccount(token) {
     .then((r) => r.json())
     .then((r) => {
       if (!r.claimedCipherAt) claimCipher(url.token);
-
       console.log(r);
     });
 }
