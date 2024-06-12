@@ -16,8 +16,6 @@ function initTokens() {
 
     const QUERY = [...new URLSearchParams(url.path)][0][1];
 
-    console.log(QUERY);
-
     fetch("https://api.hamsterkombat.io/auth/auth-by-telegram-webapp", {
       headers: {
         accept: "application/json",
