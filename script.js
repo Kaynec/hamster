@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-const dailyCipher = fs.readFileSync("urls.txt").toString().trim();
+const dailyCipher = fs.readFileSync("cipher.txt").toString().trim();
 
 const urls = fs
   .readFileSync("urls.txt")
@@ -37,7 +37,7 @@ function initTokens() {
   }
 }
 
-function syncAccount(token) {
+async function syncAccount(token) {
   const url = "https://api.hamsterkombat.io/clicker/sync";
   fetch(url, {
     headers: {
@@ -57,19 +57,38 @@ function syncAccount(token) {
     method: "POST",
   })
     .then((r) => r.json())
-    .then((r) => {
-      if (!r.claimedCipherAt) claimCipher(url.token);
-      console.log(r);
+    .then(async (r) => {
+      if (Boolean(await checkCipher(token))) return;
+      claimCipher(token);
     });
 }
 
-function claimCipher() {
+async function checkCipher(token) {
+  const res = await fetch("https://api.hamsterkombat.io/clicker/config", {
+    headers: {
+      accept: "*/*",
+      "accept-language": "en-US,en;q=0.9",
+      authorization: token,
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-site",
+      Referer: "https://hamsterkombat.io/",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+    },
+    body: null,
+    method: "POST",
+  });
+
+  const json = await res.json();
+  return json.dailyCipher.isClaimed;
+}
+
+function claimCipher(token) {
   fetch("https://api.hamsterkombat.io/clicker/claim-daily-cipher", {
     headers: {
       accept: "application/json",
       "accept-language": "en-US,en;q=0.9",
-      authorization:
-        "Bearer 17181145481263mD1ssj952tLn2j0lfEGNFuW1fnFIhE8D6ZO6iVQNqAcKoSDMkiL4BLrGEc2g4PJ7442552639",
+      authorization: token,
       "content-type": "application/json",
       "sec-fetch-dest": "empty",
       "sec-fetch-mode": "cors",
@@ -77,16 +96,20 @@ function claimCipher() {
       Referer: "https://hamsterkombat.io/",
       "Referrer-Policy": "strict-origin-when-cross-origin",
     },
-    body: `{"cipher":${dailyCipher}}`,
+    body: JSON.stringify({ cipher: dailyCipher }),
     method: "POST",
-  });
+  })
+    .then((r) => r.json())
+    .then((r) => {
+      console.log(r);
+    });
 }
 
 const EACH_TWO_AND_HALF_HOUR = 1000 * 150;
 
 // Initial Request Just For Convinience
 initTokens();
-setTimeout(() => {
+setInterval(() => {
   initTokens();
 }, EACH_TWO_AND_HALF_HOUR);
 
