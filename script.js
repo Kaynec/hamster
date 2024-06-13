@@ -10,36 +10,42 @@ const urls = fs
   .split("\n")
   .map((el) => ({ path: el, token: "" }));
 
-function initTokens() {
-  for (let url of urls) {
-    if (url.token) return syncAccount(url.token);
+async function initTokens() {
+  const resposne = [];
 
+  for (let url of urls) {
     const QUERY = [...new URLSearchParams(url.path)][0][1];
 
-    fetch("https://api.hamsterkombat.io/auth/auth-by-telegram-webapp", {
-      headers: {
-        accept: "application/json",
-        "accept-language": "en-US,en;q=0.9",
-        authorization: "authToken is empty, store token null",
-        "content-type": "application/json",
-        "sec-ch-ua-mobile": "?1",
-        "sec-ch-ua-platform": '"Android"',
-      },
-      body: JSON.stringify({ initDataRaw: QUERY }),
-      method: "POST",
-    })
-      .then((r) => r.json())
-      .then((r) => {
-        if (!r.authToken) return;
-        url.token = `Bearer ${r.authToken}`;
-        syncAccount(url.token);
-      });
+    const res = await fetch(
+      "https://api.hamsterkombat.io/auth/auth-by-telegram-webapp",
+      {
+        headers: {
+          accept: "application/json",
+          "accept-language": "en-US,en;q=0.9",
+          authorization: "authToken is empty, store token null",
+          "content-type": "application/json",
+          "sec-ch-ua-mobile": "?1",
+          "sec-ch-ua-platform": '"Android"',
+        },
+        body: JSON.stringify({ initDataRaw: QUERY }),
+        method: "POST",
+      }
+    );
+
+    const json = await res.json();
+
+    if (!json.authToken) return;
+    url.token = `Bearer ${json.authToken}`;
+    syncAccount(url.token);
+    resposne.push(json);
   }
+
+  return resposne;
 }
 
 async function syncAccount(token) {
   const url = "https://api.hamsterkombat.io/clicker/sync";
-  fetch(url, {
+  const res = await fetch(url, {
     headers: {
       accept: "*/*",
       "accept-language": "en-US,en;q=0.9",
@@ -55,12 +61,13 @@ async function syncAccount(token) {
     },
     body: null,
     method: "POST",
-  })
-    .then((r) => r.json())
-    .then(async (r) => {
-      if (Boolean(await checkCipher(token))) return;
-      claimCipher(token);
-    });
+  });
+
+  const json = await res.json();
+
+  if (Boolean(await checkCipher(token))) return;
+  claimCipher(token);
+  return json;
 }
 
 async function checkCipher(token) {
@@ -105,19 +112,18 @@ function claimCipher(token) {
     });
 }
 
-const EACH_TWO_AND_HALF_HOUR = 1000 * 150;
-
 // Initial Request Just For Convinience
 initTokens();
-setInterval(() => {
-  initTokens();
-}, EACH_TWO_AND_HALF_HOUR);
 
 const http = require("http");
 const port = process.env.PORT || 80;
-const requestListener = function (req, res) {
-  res.writeHead(200);
-  res.end("My first server!");
+const requestListener = async function (req, res) {
+  // console.log(result, "lol");
+  const result = await initTokens();
+  console.log(result);
+  // res.writeHead(200);
+  // res.end(result);
+  res.end("lol");
 };
 const server = http.createServer(requestListener);
 server.listen(port, (req, res) => {
