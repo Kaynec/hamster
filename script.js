@@ -12,8 +12,6 @@ const urls = fs
 
 function initTokens() {
   for (let url of urls) {
-    if (url.token) return syncAccount(url.token);
-
     const QUERY = [...new URLSearchParams(url.path)][0][1];
 
     fetch("https://api.hamsterkombat.io/auth/auth-by-telegram-webapp", {
@@ -30,6 +28,7 @@ function initTokens() {
     })
       .then((r) => r.json())
       .then((r) => {
+console.log(r)
         if (!r.authToken) return;
         url.token = `Bearer ${r.authToken}`;
         syncAccount(url.token);
@@ -58,6 +57,7 @@ async function syncAccount(token) {
   })
     .then((r) => r.json())
     .then(async (r) => {
+console.log(r)
       if (Boolean(await checkCipher(token))) return;
       claimCipher(token);
     });
@@ -105,21 +105,10 @@ function claimCipher(token) {
     });
 }
 
-const EACH_TWO_AND_HALF_HOUR = 1000 * 150;
+const EACH_TWO_AND_HALF_HOUR = 1000 *60 *30;
 
 // Initial Request Just For Convinience
 initTokens();
 setInterval(() => {
   initTokens();
 }, EACH_TWO_AND_HALF_HOUR);
-
-const http = require("http");
-const port = process.env.PORT || 80;
-const requestListener = function (req, res) {
-  res.writeHead(200);
-  res.end("My first server!");
-};
-const server = http.createServer(requestListener);
-server.listen(port, (req, res) => {
-  console.log(`Server is running on PORT:${port}`);
-});
