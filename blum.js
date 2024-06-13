@@ -50,7 +50,7 @@ async function claimGamePlay(token, gameId) {
         headers: myHeaders,
         body: JSON.stringify({
           gameId,
-          points: 275,
+          points: Math.random() * 100 + 200,
         }),
       };
 
