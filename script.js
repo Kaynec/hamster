@@ -10,37 +10,70 @@ const urls = fs
   .split("\n")
   .map((el) => ({ path: el, token: "" }));
 
+async function getTokenFromUrl(url) {
+  const QUERY = [...new URLSearchParams(url.path)][0][1];
+
+  const res = await fetch(
+    "https://api.hamsterkombat.io/auth/auth-by-telegram-webapp",
+    {
+      headers: {
+        accept: "application/json",
+        "accept-language": "en-US,en;q=0.9",
+        authorization: "authToken is empty, store token null",
+        "content-type": "application/json",
+        "sec-ch-ua-mobile": "?1",
+        "sec-ch-ua-platform": '"Android"',
+      },
+      body: JSON.stringify({ initDataRaw: QUERY }),
+      method: "POST",
+    }
+  );
+
+  const json = await res.json();
+
+  if (!json.authToken) return;
+  return `Bearer ${json.authToken}`;
+}
+
 async function initTokens() {
-  const resposne = [];
+  const resposneArray = [];
 
   for (let url of urls) {
-    const QUERY = [...new URLSearchParams(url.path)][0][1];
+    const token = await getTokenFromUrl(url);
+    const { clickerUser } = await syncAccount(token);
 
-    const res = await fetch(
-      "https://api.hamsterkombat.io/auth/auth-by-telegram-webapp",
-      {
-        headers: {
-          accept: "application/json",
-          "accept-language": "en-US,en;q=0.9",
-          authorization: "authToken is empty, store token null",
-          "content-type": "application/json",
-          "sec-ch-ua-mobile": "?1",
-          "sec-ch-ua-platform": '"Android"',
-        },
-        body: JSON.stringify({ initDataRaw: QUERY }),
-        method: "POST",
-      }
-    );
+    const {
+      maxTaps,
+      referralsCount,
+      earnPassivePerSec,
+      earnPassivePerHour,
+      lastPassiveEarn,
+      claimedCipherAt,
+      claimedUpgradeComboAt,
+    } = clickerUser;
 
-    const json = await res.json();
+    const check = await checkCipher(token);
 
-    if (!json.authToken) return;
-    url.token = `Bearer ${json.authToken}`;
-    syncAccount(url.token);
-    resposne.push(json);
+    const result = {
+      detail: {
+        maxTaps,
+        referralsCount,
+        earnPassivePerSec,
+        earnPassivePerHour,
+        lastPassiveEarn,
+        claimedCipherAt,
+        claimedUpgradeComboAt,
+      },
+      cipher: null,
+    };
+
+    if (check === false) claimCipher(token);
+
+    result.cipher = `cipher is ${check}`;
+    resposneArray.push(result);
   }
 
-  return resposne;
+  return await Promise.all(resposneArray);
 }
 
 async function syncAccount(token) {
@@ -65,8 +98,6 @@ async function syncAccount(token) {
 
   const json = await res.json();
 
-  if (Boolean(await checkCipher(token))) return;
-  claimCipher(token);
   return json;
 }
 
@@ -105,25 +136,23 @@ function claimCipher(token) {
     },
     body: JSON.stringify({ cipher: dailyCipher }),
     method: "POST",
-  })
-    .then((r) => r.json())
-    .then((r) => {
-      console.log(r);
-    });
+  }).then((r) => r.json());
 }
-
-// Initial Request Just For Convinience
-initTokens();
 
 const http = require("http");
 const port = process.env.PORT || 80;
 const requestListener = async function (req, res) {
-  // console.log(result, "lol");
   const result = await initTokens();
-  console.log(result);
-  // res.writeHead(200);
-  // res.end(result);
-  res.end("lol");
+  res.setHeader("Content-Type", "application/json");
+  if (result) {
+    res.writeHead(200);
+    res.end(JSON.stringify(result), null, 3);
+  } else {
+    res.writeHead(400);
+    res.end(
+      JSON.stringify({ detail: "ERROR : SOMETHING GAY HAPPEND" }, null, 3)
+    );
+  }
 };
 const server = http.createServer(requestListener);
 server.listen(port, (req, res) => {
