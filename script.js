@@ -41,6 +41,7 @@ async function initTokens() {
   for (let url of urls) {
     const token = await getTokenFromUrl(url);
     const { clickerUser } = await syncAccount(token);
+    const claimStreakDay = await claimStreakDays(token);
 
     const {
       maxTaps,
@@ -65,6 +66,7 @@ async function initTokens() {
         claimedUpgradeComboAt,
       },
       cipher: null,
+      claimStreakDay,
     };
 
     if (check === false) claimCipher(token);
@@ -137,6 +139,26 @@ function claimCipher(token) {
     body: JSON.stringify({ cipher: dailyCipher }),
     method: "POST",
   }).then((r) => r.json());
+}
+
+function claimStreakDays(token) {
+  return fetch("https://api.hamsterkombat.io/clicker/check-task", {
+    headers: {
+      accept: "application/json",
+      "accept-language": "en-US,en;q=0.9",
+      authorization: token,
+      "content-type": "application/json",
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-site",
+      Referer: "https://hamsterkombat.io/",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+    },
+    body: JSON.stringify({
+      taskId: "streak_days",
+    }),
+    method: "POST",
+  }).then((r) => r.text());
 }
 
 const http = require("http");
