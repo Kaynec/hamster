@@ -65,8 +65,7 @@ async function initTokens() {
         claimedCipherAt,
         claimedUpgradeComboAt,
       },
-      cipher: null,
-      claimStreakDay,
+      cipher: null
     };
 
     if (check === false) claimCipher(token);
